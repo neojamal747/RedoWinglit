@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+	<html>
+	<head>
+		<title>WingLit</title>
+		<!--link to reset.css-->
+		<link rel="stylesheet" type="text/css" href="assets/reset.css">
+		<!--link to bootswatch-->
+		<link rel="stylesheet" type="text/css" href="https://bootswatch.com/4/minty/bootstrap.css"></link>
+		<!--Link to style.css-->
+		<link rel="stylesheet" type="text/css" href="assets/style.css">		
+		<!--font style-->
+		<link href="https://fonts.googleapis.com/css?family=Lobster" rel="stylesheet">
+
+
+		<script type="text/javascript" src="http://www.google.com/jsapi"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+		<script type="text/javascript">
+
+		var fxml_url = 'http://yasminehalim:3c3f071558d5c6eb5316dc16251e6e89b7d81896@flightxml.flightaware.com/json/FlightXML2/';
+
+
+google.load("visualization", "1", {packages:["map"]});
+
+
+// When the button is clicked, fetch the details about the entered flight ident.
+$(document).ready(function() {
+    $('#submit').click(function() {
+    $.ajax({
+        type: 'GET',
+        url: fxml_url + 'FlightInfoEx',
+        data: { 'ident': $('#ident_text').val(), 'howMany': 10, 'offset': 0 },
+        success : function(result) {
+            if (result.error) {
+                alert('Failed to fetch flight: ' + result.error);
+                return;
+            }
+            for (flight of result.FlightInfoExResult.flights) {
+                if (flight.actualdeparturetime > 0) {
+                    // display some textual details about the flight.
+                    $('#results').html('Flight ' + flight.ident + ' from ' + flight.origin + ' to ' + flight.destination);
+
+                    // display the route on a map.
+                    fetchAndRenderRoute(flight.faFlightID);
+                    return;
+                }
+            }
+            alert('Did not find any useful flights');
+        },
+        error: function(data, text) { alert('Failed to fetch flight: ' + data); },
+        dataType: 'jsonp',
+        jsonp: 'jsonp_callback',
+        xhrFields: { withCredentials: true }
+        });
+    });
+});
+
+
+// Fetch the planned route for a specified flight_id.
+function fetchAndRenderRoute(flight_id) {
+    $.ajax({
+       type: 'GET',
+       url: fxml_url + 'DecodeFlightRoute', 
+       data: { 'faFlightID': flight_id },
+       success : function(result) {
+           if (result.error) {
+               alert('Failed to decode route: ' + result.error);
+               return;
+           }
+
+           // Initialize a data table using the Google API.
+           var table = new google.visualization.DataTable();
+           table.addColumn('number', 'Lat');
+           table.addColumn('number', 'Lon');
+           table.addColumn('string', 'Name');
+
+           // Insert all of the points into the data table.
+           var points = result.DecodeFlightRouteResult.data;
+           table.addRows(points.length);
+           for (rowid = 0; rowid < points.length; rowid++) {
+                table.setCell(rowid, 0, points[rowid].latitude);
+                table.setCell(rowid, 1, points[rowid].longitude);
+                table.setCell(rowid, 2, points[rowid].name + ' (' + points[rowid].type + ')' );
+           }
+
+           // Render the data table into a map using Google Maps API.
+           var map = new google.visualization.Map(document.getElementById('map_div'));
+           map.draw(table, {showTip: true, showLine: true, lineWidth: 3, lineColor: '#009900'});
+       },
+       error: function(data, text) { alert('Failed to decode route: ' + data); },
+       dataType: 'jsonp',
+       jsonp: 'jsonp_callback',
+       xhrFields: { withCredentials: true }
+   });
+}
+
+
+</script>
+
+
+		<!--Title-->
+		<h1>WingLit</h1>
+
+
+		<!--input fields-->
+		<div class="container" id="inputField">
+
+			<!--input for flight #-->
+			<div class="form-group has-success">
+  			<label class="form-control-label" for="inputSuccess1">Flight #</label>
+  			<input type="text" name="ident" id="ident_text" value="" onfocus="if(this.value=='Flight #') this.value=";" class="form-control is-valid" id="inputValid">
+ 
+			<br>
+
+			<!--input for airport code-->
+			<div class="form-group has-success">
+  			<label class="form-control-label" for="inputSuccess1">Airport Code</label>
+  			<input type="text" onfocus="if(this.value=='Flight #') this.value=";" class="form-control is-valid" id="inputValid">
+			
+			<br>
+
+			<h6>OR</h6>
+			
+			<br>
+
+			<!--input for departure date-->
+			<div class="form-group has-success">
+  			<label class="form-control-label" for="inputSuccess1">Departure Date</label>
+  			<input type="text" onfocus="if(this.value=='Flight #') this.value=";" class="form-control is-valid" id="inputValid">
+
+			<br>
+
+			<!--input for airline-->
+			<div class="form-group has-success">
+  			<label class="form-control-label" for="inputSuccess1">Airline</label>
+  			<input type="text" onfocus="if(this.value=='Flight #') this.value=";" class="form-control is-valid" id="inputValid">	
+			
+			
+
+		</div>
+
+		<div>
+			
+		</div>
+	
+<script
+  src="https://code.jquery.com/jquery-3.2.1.min.js"
+  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+  crossorigin="anonymous"></script>
+
+  <!-- <script type="text/javascript" src="./airports.js"> -->
+
+    <form onsubmit="return false;" action="secondpage.html">
+
+    <div id="results"></div>
+    <div id="map_div" style="width: 600px; height: 00px"></div>
+
+    <input type="submit" id="submit" value="Submit" />
+    </form>
+
+    <style>
+/* The Modal (background) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+}
+
+/* The Close Button */
+.close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- Trigger/Open The Modal -->
+<button id="myBtn">Flight Tips</button>
+
+<!-- The Modal -->
+<div id="myModal" class="modal">
+
+  <!-- Modal content -->
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <p>Don't Forget Your Passport!</p>
+
+    <p>Liquids Only 3.5 Ozs!</p>
+
+    <p>1 Carry On, 1 Personal Item!</p>
+  </div>
+
+</div>
+
+<script>
+// Get the modal
+var modal = document.getElementById('myModal');
+
+// Get the button that opens the modal
+var btn = document.getElementById("myBtn");
+
+// Get the <span> element that closes the modal
+var span = document.getElementsByClassName("close")[0];
+
+// When the user clicks the button, open the modal 
+btn.onclick = function() {
+    modal.style.display = "block";
+}
+
+// When the user clicks on <span> (x), close the modal
+span.onclick = function() {
+    modal.style.display = "none";
+}
+
+// When the user clicks anywhere outside of the modal, close it
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+}
+</script>
+  </body>
+
+
+</form>
+	</body>
+
+	</html>
